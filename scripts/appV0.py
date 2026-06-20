@@ -3,10 +3,8 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
 import os
-import plotly.io as pio
-import time
+
 
 #------------------------------------------- Setup -------------------------------------------#
 # Get the working directory
@@ -34,6 +32,7 @@ colors = {
     'primary_maroon': '#360829',
     'bright_pink': '#ff57bf',
     'soft_pink': '#ffadd6',
+    'soft_white': '#f5e9f1',
     'white': '#ffffff'
 }
 
@@ -49,7 +48,7 @@ clv_segment_colors = {
     'Bronze': '#CD7F32',
     'Silver': '#8B8A89',
     'Gold': '#FFD700',
-    'Platinum': '#EEEEEC'
+    'Platinum': '#f7f7f7'
 }
 
 # Get categorical columns with reasonable unique values (< 5)
@@ -83,10 +82,31 @@ st.markdown(
             color: {colors['primary_maroon']} !important;
         }}
 
+        /* 3. Create the Metric Card effect */
+        [data-testid="stMetric"] {{
+            background-color: {colors['soft_white']}; 
+            border: 1px solid {colors['soft_white']};
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
+            transition: transform 0.3s ease;
+        }}
+
+        /* 4. Style the plotly chart container */
+        .stPlotlyChart {{
+            background-color: {colors['soft_white']};
+            border-radius: 15px;
+            padding: 10px 20px;  /* 0 vertical padding, 20px horizontal padding */
+            margin: 10px;   /* Add margin to ensure space around the container */
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
+            transition: transform 0.3s ease;
+        }}
     </style>
     """,
     unsafe_allow_html=True
 )
+
+
 
 #  Main app
 st.title("Customer Behavior Analytics Dashboard")
@@ -168,7 +188,7 @@ if selected_category == 'clv_segment':
         text='customer_lifetime_value',
         hover_data={'customer_lifetime_value': ':,.2f'}
     )
-else:
+else: # All other columns
     fig = px.bar(
         clv_by_category,
         x=selected_category,
@@ -190,11 +210,20 @@ fig.update_traces(
 
 # Add interactivity
 fig.update_layout(
+    # width=2000,  # Set a fixed width
+    # height=400,  # Set a fixed height
     clickmode='event+select',
     hoverlabel=dict(bgcolor='white', font_size=14),
     title={
         'font': {'size': 24}  # Adjust size here
     }
+)
+
+# Make the plot transparent to allow CSS formatting to take over:
+fig.update_layout(
+    plot_bgcolor='rgba(255, 255, 255, 0)',
+    paper_bgcolor='rgba(255, 255, 255, 0)',
+    margin=dict(l=200, r=200, t=50, b=50),  # Start with small base margins
 )
 
 # Display chart
