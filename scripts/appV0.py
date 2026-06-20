@@ -156,6 +156,9 @@ with col3:
 # Add a divider
 st.markdown("---")
 
+# Add a header for customer lifetime value plot
+st.header("Customer Lifetime Value")
+
 # Prepare data for visualization
 clv_by_category = customers.groupby(selected_category)['customer_lifetime_value'].agg(
     aggregation_method.lower() # to format input
@@ -181,7 +184,7 @@ if selected_category == 'clv_segment':
         clv_by_category,
         x=selected_category,
         y='customer_lifetime_value',
-        title=f'Customer Lifetime Value by {selected_category}',
+        title=f'{aggregation_method} Customer Lifetime Value by {selected_category}',
         labels={'customer_lifetime_value': f'CLV ({aggregation_method})'},
         color=selected_category,
         color_discrete_map=clv_segment_colors,  # Use custom colors
@@ -193,7 +196,7 @@ else: # All other columns
         clv_by_category,
         x=selected_category,
         y='customer_lifetime_value',
-        title=f'Customer Lifetime Value by {selected_category}',
+        title=f'{aggregation_method} Customer Lifetime Value by {selected_category}',
         labels={'customer_lifetime_value': f'CLV ({aggregation_method})'},
         color=selected_category,
         color_discrete_sequence=px.colors.qualitative.Plotly,  # Default colors
@@ -232,8 +235,14 @@ st.plotly_chart(fig, use_container_width=True)
 # Add data table for detailed view
 # st.subheader("Detailed Values")
 st.markdown(f"**Customer Lifetime Value: Table Breakdown ({aggregation_method})**")
+
 st.dataframe(
-    clv_by_category.style.format({'customer_lifetime_value': '${:,.0f}'}),
+    clv_by_category.style
+    .format({'customer_lifetime_value': '${:,.0f}'})
+    .set_table_styles([{
+        'selector': 'th',
+        'props': [('background-color', colors['soft_white'])]
+    }]),
     use_container_width=True
 )
 
