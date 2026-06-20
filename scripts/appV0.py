@@ -7,14 +7,7 @@ from datetime import datetime, timedelta
 import os
 import plotly.io as pio
 
-# Page configuration
-st.set_page_config(
-    page_title="Customer Behavior Dashboard",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
+#------------------------------------------- Setup -------------------------------------------#
 # Get the working directory
 print("Current working directory:", os.getcwd())
 
@@ -32,13 +25,14 @@ def get_data():
 
     return transactions, customers
 
-#  Main app
-st.title("Customer Behavior Analytics Dashboard")
-st.markdown("Interactive dashboard showcasing customer transaction patterns and behavioral insights")
-
 # Load the transactional data and customer data
 transactions, customers = get_data()
 
+#------------------------------------------- Calculations -------------------------------------------#
+# Calculate key metrics
+total_customers = len(customers)
+total_lifetime_value = customers['customer_lifetime_value'].sum() / 1_000_000  # Convert to millions
+total_monthly_transactions = customers['monthly_transaction_count'].sum()
 
 # Define custom colors for clv_segment
 clv_segment_colors = {
@@ -48,14 +42,54 @@ clv_segment_colors = {
     'Platinum': '#EEEEEC'
 }
 
-# Create sidebar filters
-st.sidebar.header("Filters")
-
 # Get categorical columns with reasonable unique values (< 5)
 reasonable_number_categorical = 5
 categorical_columns = [col for col in customers.columns 
                       if customers[col].nunique() < reasonable_number_categorical and 
                       col not in ['customer_id', 'customer_lifetime_value']]
+
+#------------------------------------------- Streamlit App -------------------------------------------#
+# Page configuration
+st.set_page_config(
+    page_title="Customer Behavior Dashboard",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+#  Main app
+st.title("Customer Behavior Analytics Dashboard")
+st.markdown("Interactive dashboard showcasing customer transaction patterns and behavioral insights")
+
+# Create sidebar filters
+st.sidebar.header("Filters")
+
+# Create a metrics row
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        label="Total Customers Surveyed",
+        value=f"{total_customers:,}",
+        help="Total number of unique customers in the dataset"
+    )
+
+with col2:
+    st.metric(
+        label="Total Lifetime Value (Millions)",
+        value=f"${total_lifetime_value:,.0f}M",
+        help="Sum of all customer lifetime values in millions"
+    )
+
+with col3:
+    st.metric(
+        label="Total Monthly Transactions",
+        value=f"${total_monthly_transactions:,.0f}M",
+        help="Sum of all monthly transaction counts"
+    )
+
+# Add a divider
+st.markdown("---")
 
 # Dropdown for categorical variable
 selected_category = st.sidebar.selectbox(
@@ -73,7 +107,8 @@ aggregation_method = st.sidebar.selectbox(
 clv_by_category = customers.groupby(selected_category)['customer_lifetime_value'].agg(
     aggregation_method.lower() # to format input
 ).reset_index()
-
+# Shift index to start at 1
+clv_by_category.index += 1
 
 # Special case. Define the clv_segment order
 segment_order = ['Bronze', 'Silver', 'Gold', 'Platinum']
@@ -123,20 +158,24 @@ fig.update_traces(
 # Add interactivity
 fig.update_layout(
     clickmode='event+select',
-    hoverlabel=dict(bgcolor='white', font_size=14)
+    hoverlabel=dict(bgcolor='white', font_size=14),
+    title={
+        'font': {'size': 24}  # Adjust size here
+    }
 )
 
 # Display chart
 st.plotly_chart(fig, use_container_width=True)
 
 # Add data table for detailed view
-st.subheader("Detailed Values")
+# st.subheader("Detailed Values")
+st.markdown(f"**Customer Lifetime Value: Table Breakdown ({aggregation_method})**")
 st.dataframe(
-    clv_by_category.style.format({'customer_lifetime_value': '{:,.0f}'}),
+    clv_by_category.style.format({'customer_lifetime_value': '${:,.0f}'}),
     use_container_width=True
 )
 
-
+#-----------------------------------------------------------------------------------------------------#
 
 
 
