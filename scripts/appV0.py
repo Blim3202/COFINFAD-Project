@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import os
 import plotly.io as pio
+import time
 
 #------------------------------------------- Setup -------------------------------------------#
 # Get the working directory
@@ -27,6 +28,15 @@ def get_data():
 
 # Load the transactional data and customer data
 transactions, customers = get_data()
+
+# Define color palette
+colors = {
+    'primary_maroon': '#360829',
+    'bright_pink': '#ff57bf',
+    'soft_pink': '#ffadd6',
+    'white': '#ffffff'
+}
+
 
 #------------------------------------------- Calculations -------------------------------------------#
 # Calculate key metrics
@@ -57,12 +67,46 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Inject custom CSS – Streamlit needs the `unsafe_allow_html=True` flag
+st.markdown(
+    f"""
+    <style>
+        /* 1. Target the main sidebar container */
+        section[data-testid="stSidebar"] {{
+            background-color: {colors['soft_pink']};
+        }}
+
+        /* 2. Targets titles, section headers, subheaders, and sidebar headers */
+        h1, h2, h3, h4, h5, h6,
+        [data-testid="stHeader"] h1,
+        [data-testid="stSidebar"] h2 {{
+            color: {colors['primary_maroon']} !important;
+        }}
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 #  Main app
 st.title("Customer Behavior Analytics Dashboard")
 st.markdown("Interactive dashboard showcasing customer transaction patterns and behavioral insights")
 
 # Create sidebar filters
 st.sidebar.header("Filters")
+
+
+# Dropdown for categorical variable
+selected_category = st.sidebar.selectbox(
+    "Select Categorical Variable",
+    categorical_columns
+)
+
+# Dropdown for aggregation method (Mean or Median)
+aggregation_method = st.sidebar.selectbox(
+    "Aggregation Method",
+    ['Mean', 'Median']
+)
 
 # Create a metrics row
 col1, col2, col3 = st.columns(3)
@@ -88,20 +132,9 @@ with col3:
         help="Sum of all monthly transaction counts"
     )
 
+
 # Add a divider
 st.markdown("---")
-
-# Dropdown for categorical variable
-selected_category = st.sidebar.selectbox(
-    "Select Categorical Variable",
-    categorical_columns
-)
-
-# Dropdown for aggregation method (Mean or Median)
-aggregation_method = st.sidebar.selectbox(
-    "Aggregation Method",
-    ['Mean', 'Median']
-)
 
 # Prepare data for visualization
 clv_by_category = customers.groupby(selected_category)['customer_lifetime_value'].agg(
@@ -239,3 +272,8 @@ st.dataframe(
 # pio.show(fig)
 # # Display the plot
 # # st.plotly_chart(fig, use_container_width=True)
+
+        # /* 2. Style the static selectbox field when closed */
+        # section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {{
+        #     background-color: {colors["soft_pink"]} !important;
+        # }}
