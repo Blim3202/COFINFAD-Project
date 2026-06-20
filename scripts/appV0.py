@@ -31,17 +31,12 @@ transactions, customers = get_data()
 colors = {
     'primary_maroon': '#360829',
     'bright_pink': '#ff57bf',
-    'soft_pink': '#ffadd6',
-    'soft_white': '#f5e9f1',
-    'white': '#ffffff'
+    'soft_white': "#fdf7fc",
+    'soft_gray':'#faf5f7',
+    'gray':"#ccc9ca",
+    'white': '#ffffff',
+    'black': '#000000'
 }
-
-
-#------------------------------------------- Calculations -------------------------------------------#
-# Calculate key metrics
-total_customers = len(customers)
-total_lifetime_value = customers['customer_lifetime_value'].sum() / 1_000_000  # Convert to millions
-total_monthly_transactions = customers['monthly_transaction_count'].sum()
 
 # Define custom colors for clv_segment
 clv_segment_colors = {
@@ -51,11 +46,40 @@ clv_segment_colors = {
     'Platinum': '#f7f7f7'
 }
 
+pcolors = px.colors.qualitative.Plotly  # This gives you the standard Plotly colors
+#------------------------------------------- Calculations -------------------------------------------#
+# Calculate key customer metrics
+total_customers = len(customers)
+total_lifetime_value = customers['customer_lifetime_value'].sum() / 1_000_000  # Convert to millions
+total_monthly_transactions = customers['monthly_transaction_count'].sum()
+
+# Calculate key transaction metrics
+total_transactions = len(transactions)
+average_transaction_value = transactions['amount'].mean()
+
 # Get categorical columns with reasonable unique values (< 5)
 reasonable_number_categorical = 5
 categorical_columns = [col for col in customers.columns 
                       if customers[col].nunique() < reasonable_number_categorical and 
                       col not in ['customer_id', 'customer_lifetime_value']]
+
+# Transaction Analysis Calculations
+# Convert date to datetime and extract month
+# transactions['date'] = pd.to_datetime(transactions['date'], format='%d/%m/%Y')
+transactions['date'] = pd.to_datetime(transactions['date'], dayfirst=True, errors='coerce')
+transactions['month'] = transactions['date'].dt.to_period('M')
+
+# Group by month and transaction type, summing amounts
+monthly_transactions = transactions.groupby(['month', 'type'])['amount'].sum().reset_index()
+
+# Get all unique months in order
+all_months = pd.period_range(start=transactions['month'].min(),
+                            end=transactions['month'].max(),
+                            freq='M')
+
+# Pivot the data for plotting
+transaction_pivot = monthly_transactions.pivot(index='month', columns='type', values='amount').fillna(0)
+transaction_pivot = transaction_pivot.reindex(all_months, fill_value=0)
 
 #------------------------------------------- Streamlit App -------------------------------------------#
 # Page configuration
@@ -70,50 +94,74 @@ st.set_page_config(
 st.markdown(
     f"""
     <style>
+        /* 0. Reduce the top padding of the main block‑container */
+        .reportview-container .main .block-container {{
+        padding-top: 0.1rem;   /* try 0.2rem‑1rem until it looks tight */
+        }}
+
         /* 1. Target the main sidebar container */
         section[data-testid="stSidebar"] {{
-            background-color: {colors['soft_pink']};
+            background-color: {colors['soft_gray']};
         }}
 
         /* 2. Targets titles, section headers, subheaders, and sidebar headers */
-        h1, h2, h3, h4, h5, h6,
-        [data-testid="stHeader"] h1,
+        [data-testid="stHeader"] h1, 
+        h1 {{
+            color: {colors['bright_pink']} !important;
+        }}
+        h2, h3, h4, h5, h6
+        [data-testid="stHeader"] h1, 
         [data-testid="stSidebar"] h2 {{
             color: {colors['primary_maroon']} !important;
+        }}
+        section[data-testid="stSidebar"] .stSelectbox label, {{
+            color: {colors['black']} !important;
         }}
 
         /* 3. Create the Metric Card effect */
         [data-testid="stMetric"] {{
-            background-color: {colors['soft_white']}; 
-            border: 1px solid {colors['soft_white']};
+            # background-color: {colors['soft_white']}; 
+            border: 1px solid {colors['gray']};
             border-radius: 15px;
-            padding: 15px;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
+            padding: 10px 50px;
+            # box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
             transition: transform 0.3s ease;
         }}
 
         /* 4. Style the plotly chart container */
         .stPlotlyChart {{
-            background-color: {colors['soft_white']};
+            # background-color: {colors['soft_white']};
+            # border: 1px solid {colors['primary_maroon']};
             border-radius: 15px;
-            padding: 10px 20px;  /* 0 vertical padding, 20px horizontal padding */
-            margin: 10px;   /* Add margin to ensure space around the container */
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
+            # padding: 10px 20px;  /* 0 vertical padding, 20px horizontal padding */
+            # margin: 10px;   /* Add margin to ensure space around the container */
+            # box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
             transition: transform 0.3s ease;
         }}
+
     </style>
     """,
     unsafe_allow_html=True
 )
 
-
+# Add a logo
+st.logo("resources\Octicons-mark-github.svg",
+        link="https://github.com/Blim3202/COFINFAD-Project",
+        size="large")
 
 #  Main app
 st.title("Customer Behavior Analytics Dashboard")
-st.markdown("Interactive dashboard showcasing customer transaction patterns and behavioral insights")
+st.markdown("Interactive dashboard showcasing customer transaction patterns and behavioral insights. All $ values are in Columbian Pesos. \n\n" \
+"***About the data***: *This data was based on behavioral and transactional data from 48,723 customers of a Colombian fintech company, collected over 12 months from January 4, 2023, to December 29, 2023. Comprises 3,159,157 individual transactions and was designed to support research on customer retention, financial behavior analysis, and digital financial service adoption in Latin American emerging markets.*")
+
+# # Add a divider
+# st.markdown("---")
+
+# Add a quick overview
+st.header("Overview")
 
 # Create sidebar filters
-st.sidebar.header("Filters")
+st.sidebar.header(":material/filter_alt: Filters")
 
 
 # Dropdown for categorical variable
@@ -128,7 +176,7 @@ aggregation_method = st.sidebar.selectbox(
     ['Mean', 'Median']
 )
 
-# Create a metrics row
+# Create a customer metrics row
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -137,14 +185,12 @@ with col1:
         value=f"{total_customers:,}",
         help="Total number of unique customers in the dataset"
     )
-
 with col2:
     st.metric(
         label="Total Lifetime Value (Millions)",
         value=f"${total_lifetime_value:,.0f}M",
         help="Sum of all customer lifetime values in millions"
     )
-
 with col3:
     st.metric(
         label="Total Monthly Transactions",
@@ -153,9 +199,27 @@ with col3:
     )
 
 
-# Add a divider
-st.markdown("---")
+# Create a transaction metrics row
+col1a, col2a = st.columns(2)
 
+with col1a:
+    st.metric(
+        label="Total Amount of Transactions",
+        value=f"{total_transactions:,}",
+        help="Total number of unique transactions in the dataset"
+    )
+with col2a:
+    st.metric(
+        label="Average Tansaction Value",
+        value=f"${average_transaction_value:,.0f}",
+        help="Average transaction value over all customer trasactions"
+    )
+
+
+# # Add a divider
+# st.markdown("---")
+
+## CLV Section
 # Add a header for customer lifetime value plot
 st.header("Customer Lifetime Value")
 
@@ -199,7 +263,7 @@ else: # All other columns
         title=f'{aggregation_method} Customer Lifetime Value by {selected_category}',
         labels={'customer_lifetime_value': f'CLV ({aggregation_method})'},
         color=selected_category,
-        color_discrete_sequence=px.colors.qualitative.Plotly,  # Default colors
+        color_discrete_sequence=pcolors,  # Default colors
         text='customer_lifetime_value',
         hover_data={'customer_lifetime_value': ':,.2f'}
     )
@@ -234,17 +298,63 @@ st.plotly_chart(fig, use_container_width=True)
 
 # Add data table for detailed view
 # st.subheader("Detailed Values")
-st.markdown(f"**Customer Lifetime Value: Table Breakdown ({aggregation_method})**")
+# st.markdown(f"**Customer Lifetime Value: Table Breakdown ({aggregation_method})**")
 
-st.dataframe(
-    clv_by_category.style
-    .format({'customer_lifetime_value': '${:,.0f}'})
-    .set_table_styles([{
-        'selector': 'th',
-        'props': [('background-color', colors['soft_white'])]
-    }]),
-    use_container_width=True
+
+with st.expander("Table View", icon=":material/table_view:"):
+    st.dataframe(
+        clv_by_category.style
+        .format({'customer_lifetime_value': '${:,.0f}'})
+        .set_table_styles([{
+            'selector': 'th',
+            'props': [('background-color', colors['soft_white'])]
+        }]),
+        use_container_width=True
+    )
+
+## Transactions Section
+# Add a header for transaction history section
+st.header("Transaction behaviours")
+
+# Create stacked area chart
+fig_transactions = go.Figure()
+
+for i, transaction_type in enumerate(transaction_pivot.columns):
+    fig_transactions.add_trace(go.Scatter(
+        x=transaction_pivot.index.astype(str),
+        y=transaction_pivot[transaction_type],
+        name=transaction_type,
+        mode='lines',
+        stackgroup='one',
+        line=dict(color=pcolors[i % len(pcolors)]),  # Cycle through colors if you have more types than colors
+        hovertemplate='<b>%{x}</b><br>' +
+                      f'{transaction_type}: $%{{y:,.0f}}<br>' +
+                      '<extra></extra>'
+    ))
+
+# Update layout
+fig_transactions.update_layout(
+    title='Monthly Transaction Volume by Transaction Type (Stacked)',
+    xaxis_title='Month',
+    yaxis_title='Total Transaction Amount (COP)',
+    hovermode='x unified',
+    plot_bgcolor='rgba(255, 255, 255, 0)',
+    paper_bgcolor='rgba(255, 255, 255, 0)',
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1
+    ),
+    margin=dict(l=50, r=50, t=50, b=50)
 )
+
+# Display chart
+st.plotly_chart(fig_transactions, use_container_width=True)
+
+
+
 
 #-----------------------------------------------------------------------------------------------------#
 
@@ -313,5 +423,5 @@ st.dataframe(
 
         # /* 2. Style the static selectbox field when closed */
         # section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {{
-        #     background-color: {colors["soft_pink"]} !important;
+        #     background-color: {colors["soft_white"]} !important;
         # }}
