@@ -165,7 +165,7 @@ st.markdown(
 )
 
 # Add a logo to the top left
-st.logo("resources\Octicons-mark-github.svg",
+st.logo("resources/Octicons-mark-github.svg",
         link="https://github.com/Blim3202/COFINFAD-Project",
         size="large")
 
