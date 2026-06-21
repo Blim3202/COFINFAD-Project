@@ -5,8 +5,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 
+#-----------------------------------------------------------------------------------------------------#
+#----------------------------------------------- Setup -----------------------------------------------#
+#-----------------------------------------------------------------------------------------------------#
 
-#------------------------------------------- Setup -------------------------------------------#
 # Get the working directory
 print("Current working directory:", os.getcwd())
 
@@ -47,7 +49,11 @@ clv_segment_colors = {
 }
 
 pcolors = px.colors.qualitative.Plotly  # This gives you the standard Plotly colors
+
+#----------------------------------------------------------------------------------------------------#
 #------------------------------------------- Calculations -------------------------------------------#
+#----------------------------------------------------------------------------------------------------#
+
 # Calculate key customer metrics
 total_customers = len(customers)
 total_lifetime_value = customers['customer_lifetime_value'].sum() / 1_000_000  # Convert to millions
@@ -65,9 +71,18 @@ categorical_columns = [col for col in customers.columns
 
 # Transaction Analysis Calculations
 # Convert date to datetime and extract month
-# transactions['date'] = pd.to_datetime(transactions['date'], format='%d/%m/%Y')
-transactions['date'] = pd.to_datetime(transactions['date'], dayfirst=True, errors='coerce')
+transactions['date'] = pd.to_datetime(transactions['date'], format='%Y-%m-%d', errors='coerce')
 transactions['month'] = transactions['date'].dt.to_period('M')
+# print(transactions.head(20))
+
+# Get the minimum and maximum month
+min_month = transactions['month'].min()
+max_month = transactions['month'].max()
+months_list = [str(month) for month in pd.period_range(start=min_month, end=max_month, freq="M")]
+# print(months_list)
+min_month = min_month.strftime('%Y-%m')
+max_month = max_month.strftime('%Y-%m')
+# print(min_month,type(min_month),max_month,type(max_month))
 
 # Group by month and transaction type, summing amounts
 monthly_transactions = transactions.groupby(['month', 'type'])['amount'].sum().reset_index()
@@ -80,8 +95,12 @@ all_months = pd.period_range(start=transactions['month'].min(),
 # Pivot the data for plotting
 transaction_pivot = monthly_transactions.pivot(index='month', columns='type', values='amount').fillna(0)
 transaction_pivot = transaction_pivot.reindex(all_months, fill_value=0)
-
+# print(transactions['month'].dtypes)
+print(transaction_pivot.head(25))
+#-----------------------------------------------------------------------------------------------------#
 #------------------------------------------- Streamlit App -------------------------------------------#
+#-----------------------------------------------------------------------------------------------------#
+
 # Page configuration
 st.set_page_config(
     page_title="Customer Behavior Dashboard",
@@ -94,31 +113,32 @@ st.set_page_config(
 st.markdown(
     f"""
     <style>
-        /* 0. Reduce the top padding of the main block‑container */
+        /* 1. Reduce the top padding of the main block‑container */
         .reportview-container .main .block-container {{
-        padding-top: 0.1rem;   /* try 0.2rem‑1rem until it looks tight */
+        padding-top: 0.1rem;   /* try 0.2rem‑1rem until it looks right */
         }}
 
-        /* 1. Target the main sidebar container */
+        /* 2. Target the main sidebar container and heading levels */
         section[data-testid="stSidebar"] {{
             background-color: {colors['soft_gray']};
-        }}
-
-        /* 2. Targets titles, section headers, subheaders, and sidebar headers */
-        [data-testid="stHeader"] h1, 
-        h1 {{
-            color: {colors['bright_pink']} !important;
-        }}
-        h2, h3, h4, h5, h6
-        [data-testid="stHeader"] h1, 
-        [data-testid="stSidebar"] h2 {{
-            color: {colors['primary_maroon']} !important;
         }}
         section[data-testid="stSidebar"] .stSelectbox label, {{
             color: {colors['black']} !important;
         }}
+        [data-testid="stSidebar"] h2 {{
+            color: {colors['primary_maroon']} !important;
+        }}
 
-        /* 3. Create the Metric Card effect */
+        /* 3. Targets titles, section headers, subheaders, etc */
+        h1 {{
+            color: {colors['bright_pink']} !important;
+        }}
+        h2, h3, h4, h5, h6
+        [data-testid="stHeader"] h1 {{
+            color: {colors['primary_maroon']} !important;
+        }}
+
+        /* 4. Create the Metric Card effect */
         [data-testid="stMetric"] {{
             # background-color: {colors['soft_white']}; 
             border: 1px solid {colors['gray']};
@@ -128,7 +148,7 @@ st.markdown(
             transition: transform 0.3s ease;
         }}
 
-        /* 4. Style the plotly chart container */
+        /* 5. Style the plotly chart container */
         .stPlotlyChart {{
             # background-color: {colors['soft_white']};
             # border: 1px solid {colors['primary_maroon']};
@@ -144,15 +164,18 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Add a logo
+# Add a logo to the top left
 st.logo("resources\Octicons-mark-github.svg",
         link="https://github.com/Blim3202/COFINFAD-Project",
         size="large")
+
 
 #  Main app
 st.title("Customer Behavior Analytics Dashboard")
 st.markdown("Interactive dashboard showcasing customer transaction patterns and behavioral insights. All $ values are in Columbian Pesos. \n\n" \
 "***About the data***: *This data was based on behavioral and transactional data from 48,723 customers of a Colombian fintech company, collected over 12 months from January 4, 2023, to December 29, 2023. Comprises 3,159,157 individual transactions and was designed to support research on customer retention, financial behavior analysis, and digital financial service adoption in Latin American emerging markets.*")
+
+#---------------------------------------------------------------------------------------------------------#
 
 # # Add a divider
 # st.markdown("---")
@@ -177,44 +200,44 @@ aggregation_method = st.sidebar.selectbox(
 )
 
 # Create a customer metrics row
-col1, col2, col3 = st.columns(3)
+col1a, col2a, col3a = st.columns(3)
 
-with col1:
+with col1a:
     st.metric(
         label="Total Customers Surveyed",
         value=f"{total_customers:,}",
         help="Total number of unique customers in the dataset"
     )
-with col2:
+with col2a:
     st.metric(
         label="Total Lifetime Value (Millions)",
         value=f"${total_lifetime_value:,.0f}M",
         help="Sum of all customer lifetime values in millions"
     )
-with col3:
+with col3a:
     st.metric(
         label="Total Monthly Transactions",
         value=f"${total_monthly_transactions:,.0f}M",
         help="Sum of all monthly transaction counts"
     )
 
-
 # Create a transaction metrics row
-col1a, col2a = st.columns(2)
+col1b, col2b = st.columns(2)
 
-with col1a:
+with col1b:
     st.metric(
         label="Total Amount of Transactions",
         value=f"{total_transactions:,}",
         help="Total number of unique transactions in the dataset"
     )
-with col2a:
+with col2b:
     st.metric(
         label="Average Tansaction Value",
         value=f"${average_transaction_value:,.0f}",
         help="Average transaction value over all customer trasactions"
     )
 
+#---------------------------------------------------------------------------------------------------------#
 
 # # Add a divider
 # st.markdown("---")
@@ -297,10 +320,6 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # Add data table for detailed view
-# st.subheader("Detailed Values")
-# st.markdown(f"**Customer Lifetime Value: Table Breakdown ({aggregation_method})**")
-
-
 with st.expander("Table View", icon=":material/table_view:"):
     st.dataframe(
         clv_by_category.style
@@ -312,50 +331,124 @@ with st.expander("Table View", icon=":material/table_view:"):
         use_container_width=True
     )
 
+#---------------------------------------------------------------------------------------------------------#
+
 ## Transactions Section
 # Add a header for transaction history section
 st.header("Transaction behaviours")
 
-# Create stacked area chart
-fig_transactions = go.Figure()
+# Placeholder for col to be visualised first
+colc_placeholder = st.empty()
 
-for i, transaction_type in enumerate(transaction_pivot.columns):
-    fig_transactions.add_trace(go.Scatter(
-        x=transaction_pivot.index.astype(str),
-        y=transaction_pivot[transaction_type],
-        name=transaction_type,
-        mode='lines',
-        stackgroup='one',
-        line=dict(color=pcolors[i % len(pcolors)]),  # Cycle through colors if you have more types than colors
-        hovertemplate='<b>%{x}</b><br>' +
-                      f'{transaction_type}: $%{{y:,.0f}}<br>' +
-                      '<extra></extra>'
-    ))
-
-# Update layout
-fig_transactions.update_layout(
-    title='Monthly Transaction Volume by Transaction Type (Stacked)',
-    xaxis_title='Month',
-    yaxis_title='Total Transaction Amount (COP)',
-    hovermode='x unified',
-    plot_bgcolor='rgba(255, 255, 255, 0)',
-    paper_bgcolor='rgba(255, 255, 255, 0)',
-    legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="right",
-        x=1
-    ),
-    margin=dict(l=50, r=50, t=50, b=50)
+# Slider that lets the user pick a single month (or you can use a range slider)
+selected_month = st.select_slider(
+    "Select month",
+    options=months_list,
+    value=months_list[0]          # default to the first month
 )
 
-# Display chart
-st.plotly_chart(fig_transactions, use_container_width=True)
+# Render the placeholder
+with colc_placeholder.container():
 
+    # Add transaction behavior analysis in columns
+    col1c, col2c = st.columns(2)
+    with col1c:
+        # Create stacked area chart
+        fig_transactions = go.Figure()
 
+        for i, transaction_type in enumerate(transaction_pivot.columns):
+            fig_transactions.add_trace(go.Scatter(
+                x=transaction_pivot.index.astype(str),
+                y=transaction_pivot[transaction_type],
+                name=transaction_type,
+                mode='lines',
+                stackgroup='one',
+                line=dict(color=pcolors[i % len(pcolors)]),  # Cycle through colors
+                hovertemplate='<b>%{x}</b><br>' +
+                            f'{transaction_type}: $%{{y:,.0f}}<br>' +
+                            '<extra></extra>'
+            ))
+        
+        
+        # The slider value (`selected_month`) is a string like "2023‑01"
+        max_y = transaction_pivot.loc[selected_month].sum()         # Get the sum of the transactions in the month
+        # Add vertical line
+        fig_transactions.add_shape(
+            type="line",
+            x0=selected_month,
+            x1=selected_month,
+            y0=0,
+            y1=max_y,
+            line=dict(color="gray", dash="dot")
+        )
 
+        # Update layout
+        fig_transactions.update_layout(
+            title='Monthly Transaction Volume by Transaction Type (Stacked)',
+            xaxis_title='Month',
+            yaxis_title='Total Transaction Amount (COP)',
+            hovermode='x unified',
+            plot_bgcolor='rgba(255, 255, 255, 0)',
+            paper_bgcolor='rgba(255, 255, 255, 0)',
+            # legend=dict(
+            #     orientation="h",
+            #     yanchor="bottom",
+            #     y=1.02,
+            #     xanchor="right",
+            #     x=1
+            # ),
+            # margin=dict(l=50, r=50, t=50, b=50)
+        )
 
+        # Add interactivity
+        fig_transactions.update_layout(
+            title={
+                'font': {'size': 24}  # Adjust size here
+            },
+            clickmode='event+select',
+            hoverlabel=dict(bgcolor='white', font_size=14),
+            legend_title="Transaction type"
+        )
+
+        # Display chart
+        st.plotly_chart(fig_transactions, use_container_width=True)
+
+    with col2c:
+        # Filter the dataframe to the chosen month - Calculations
+        filtered = transactions[transactions["month"] == selected_month]
+
+        fig = px.histogram(
+            filtered,
+            x="amount",                     # X‑axis: transaction amount (will be binned)
+            y="amount",                     # Y‑axis: we’ll sum the amount per bin
+            color="type",                   # colour by transaction type (Withdrawal, Transfer, …)
+            histfunc="sum",                 # sum the amounts in each bin
+            # nbins=20,                     # adjust the number of bins as you like
+            title=f"Total Monthly Transaction Distribution – {selected_month}",
+            color_discrete_sequence=pcolors,  # Default colors
+            category_orders={
+                "type": ["Deposit", "Payment", "Transfer", "Withdrawal"]
+            }
+        )
+
+        fig.update_traces(xbins=dict( 
+            start=0,
+            end=100000000,
+            size=10000000
+        ))
+
+        fig.update_layout(
+            xaxis_title="Transaction amount (binned)",
+            yaxis_title="Total amount per bin",
+            bargap=0.1,
+            legend_title="Transaction type",
+            legend_traceorder="reversed", #This matches the stacked line graph chart
+            title={
+                'font': {'size': 24}  # Adjust size here
+            }
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 #-----------------------------------------------------------------------------------------------------#
 
 
