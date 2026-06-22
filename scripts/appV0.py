@@ -68,8 +68,27 @@ average_transaction_value = transactions['amount'].mean()
 # Get categorical columns with reasonable unique values (< 5)
 reasonable_number_categorical = 5
 categorical_columns = [col for col in customers.columns 
-                      if customers[col].nunique() < reasonable_number_categorical and 
-                      col not in ['customer_id', 'customer_lifetime_value']]
+                        if customers[col].nunique() < reasonable_number_categorical and 
+                        col not in ['customer_id', 'customer_lifetime_value'] and
+                        customers[col].notnull().all()]
+
+# Special treatment for CLV segment
+segment_order = ['Bronze', 'Silver', 'Gold', 'Platinum']
+customers['clv_segment'] = pd.Categorical(
+        customers['clv_segment'],
+        categories=segment_order,
+        ordered=True
+    )
+
+# Identify numerical columns (excluding columns with missing values or non-numeric types)
+# numerical_columns = []
+# for col in customers.columns:
+#     if pd.api.types.is_numeric_dtype(customers[col]) and customers[col].notnull().all() and col != 'churn_probability':
+#             numerical_columns.append(col) 
+
+# These are the only numerical ones that make sense to be plotted for churn
+numerical_columns = ['active_products','app_logins_frequency','app_logins_frequency','international_transactions','failed_transactions',
+                     'failed_transactions','satisfaction_score','satisfaction_score','satisfaction_score','app_store_rating']
 
 # Transaction Analysis Calculations
 # Convert date to datetime and extract month
@@ -197,14 +216,36 @@ st.sidebar.header(":material/filter_alt: Filters")
 # Dropdown for categorical variable
 selected_category = st.sidebar.selectbox(
     "Select Categorical Variable",
-    categorical_columns
+    categorical_columns,
+    index=categorical_columns.index('clv_segment'),
+    help="Select the main categorical variable to analyse"
+)
+
+# Dropdown for SECONDARY categorical variable
+selected_category_secondary = st.sidebar.selectbox(
+    "Select Secondary Categorical Variable",
+    categorical_columns,
+    index=categorical_columns.index('preferred_transaction_type'),
+    help="Secondary categorical variable to plot against. Used for Churn Heatmap"
+)
+
+# Dropdown for numerical column
+selected_numerical_column = st.sidebar.selectbox(
+    "Select Numerical Column",
+    numerical_columns,
+    index=0, # Active products
+    help="Non-Continuous numerical variables only"
 )
 
 # Dropdown for aggregation method (Mean or Median)
 aggregation_method = st.sidebar.selectbox(
     "Aggregation Method",
-    ['Mean', 'Median']
+    ['Mean', 'Median'],
+    index=1,
+    help="Aggregation method to be applied where applicable"
 )
+
+# Dropdown for selecting a numerical column
 
 # Create a customer metrics row
 col1a, col2a, col3a = st.columns(3)
@@ -259,18 +300,6 @@ clv_by_category = customers.groupby(selected_category)['customer_lifetime_value'
 ).reset_index()
 # Shift index to start at 1
 clv_by_category.index += 1
-
-# Special case. Define the clv_segment order
-segment_order = ['Bronze', 'Silver', 'Gold', 'Platinum']
-
-# If the selected category is 'clv_segment', enforce the order
-if selected_category == 'clv_segment':
-    clv_by_category[selected_category] = pd.Categorical(
-        clv_by_category[selected_category],
-        categories=segment_order,
-        ordered=True
-    )
-    clv_by_category = clv_by_category.sort_values(selected_category)
 
 # Create bar chart with interactivity (special colouring for clv_segment)
 if selected_category == 'clv_segment':
@@ -342,7 +371,7 @@ with st.expander("Table View", icon=":material/table_view:"):
 
 ## Transactions Section
 # Add a header for transaction history section
-st.header("Transaction behaviours")
+st.header("Transaction Behaviours")
 
 # Placeholder for col to be visualised first
 colc_placeholder = st.empty()
@@ -468,9 +497,56 @@ with colc_placeholder.container():
         st.plotly_chart(fig, width='stretch')
 #-----------------------------------------------------------------------------------------------------#
 
+## Begin Churn Visualisations
+# Add a header for transaction history section
+st.header("Churn Drivers")
 
+# Add columns for 2 graphs one categorical comparisons and the other for numerical
+col1d, col2d = st.columns(2)
 
+with col1d:
+    if selected_category == selected_category_secondary:
+        st.error("Please select different categorical variables for the X and Y axes on the left sidebar.")
+    else:
+        # Pivot the data for the heatmap - Calculations need to be below since streamlit varibles not declared earlier
+        pivot_df = customers.pivot_table(
+            values='churn_probability',
+            index=selected_category,
+            columns=selected_category_secondary,
+            # aggfunc='mean' if aggregation_method == 'Mean' else 'median'
+            aggfunc=lambda x: x.mean().round(3) if aggregation_method == 'Mean' else x.median().round(3) # For 2 dp aggregations
+        )
 
+            # Create the heatmap using Plotly Express
+        fig = px.imshow(
+            pivot_df,
+            title=f"Churn Probability Heatmap: {selected_category} vs {selected_category_secondary} ",
+            labels=dict(x=selected_category_secondary, y=selected_category, color="Churn Probability"),
+            x=pivot_df.columns,
+            y=pivot_df.index,
+            color_continuous_scale='Sunsetdark',  # Blue-Red color scale
+            text_auto=True  # Display values on the heatmap
+        )
+
+        # Display the heatmap in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+with col2d:
+# Create the violin plot
+    fig_violin = px.violin(
+        customers,
+        x=selected_numerical_column,
+        y='churn_probability',
+        title=f'Churn Probability Distribution by {selected_numerical_column}',
+        labels={'churn_probability': 'Churn Probability', selected_numerical_column: selected_numerical_column},
+        box=True,  # Add a box plot inside the violin plot for better visualization
+        points='outliers',  # Show outliers as individual points
+        # color=selected_numerical_column,  # Color by the numerical column for clarity
+        template='plotly_white'  # Use a clean white background
+    )
+
+    st.plotly_chart(fig_violin, use_container_width=True)
+
+#---------------------------------------------------------------------------------------------------------#
 
 
 
