@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from groq import Groq
 import os
+# from testllm import generate_followup_questions, handle_chat_input  # Import from your LLM helper file
 
 #-----------------------------------------------------------------------------------------------------#
 #----------------------------------------------- Setup -----------------------------------------------#
@@ -31,6 +32,16 @@ def get_data():
 
 # Load the transactional data and customer data
 transactions, customers = get_data()
+if 'transactions' not in st.session_state:
+    st.session_state.transactions = transactions
+if 'customers' not in st.session_state:
+    st.session_state.customers = customers
+
+# Chatbot function
+def chatbot_response(user_query, chat_history):
+    # Here you can implement logic to generate a response based on the user query
+    # For now, let's just return a simple acknowledgment
+    return f"You asked: {user_query}"
 
 # Define color palette
 colors = {
@@ -196,8 +207,6 @@ st.logo("resources/Octicons-mark-github.svg",
         link="https://github.com/Blim3202/COFINFAD-Project",
         size="large")
 
-
-#  Main app
 st.title("Customer Behavior Analytics Dashboard")
 st.markdown("Interactive dashboard showcasing customer transaction patterns and behavioral insights. All $ values are in Columbian Pesos. \n\n" \
 "***About the data***: *This data was based on behavioral and transactional data from 48,723 customers of a Colombian fintech company, collected over 12 months from January 4, 2023, to December 29, 2023. Comprises 3,159,157 individual transactions and was designed to support research on customer retention, financial behavior analysis, and digital financial service adoption in Latin American emerging markets.*")
@@ -206,7 +215,6 @@ st.markdown("Interactive dashboard showcasing customer transaction patterns and 
 
 # # Add a divider
 # st.markdown("---")
-
 # Add a quick overview
 st.header("Overview")
 
