@@ -10,18 +10,18 @@ import os
 #-----------------------------------------------------------------------------------------------------#
 
 # Get the working directory
-print("Current working directory:", os.getcwd())
+# print("Current working directory:", os.getcwd())
 
 # Get data function
 def get_data():
 
     # Start Loading
-    print("Loading Data:")
+    # print("Loading Data:")
     # Transaction data
     transactions = pd.read_csv("data/transactions_data.csv")
     # Customer data
     customers = pd.read_csv("data/customer_data.csv")
-    print("Data Loaded:")
+    # print("Data Loaded:")
 
 
     return transactions, customers
@@ -95,8 +95,9 @@ all_months = pd.period_range(start=transactions['month'].min(),
 # Pivot the data for plotting
 transaction_pivot = monthly_transactions.pivot(index='month', columns='type', values='amount').fillna(0)
 transaction_pivot = transaction_pivot.reindex(all_months, fill_value=0)
+del monthly_transactions    # Delete intermediary df
 # print(transactions['month'].dtypes)
-print(transaction_pivot.head(25))
+# print(transaction_pivot.head(25))
 #-----------------------------------------------------------------------------------------------------#
 #------------------------------------------- Streamlit App -------------------------------------------#
 #-----------------------------------------------------------------------------------------------------#
@@ -317,7 +318,7 @@ fig.update_layout(
 )
 
 # Display chart
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 
 # Add data table for detailed view
 with st.expander("Table View", icon=":material/table_view:"):
@@ -328,7 +329,7 @@ with st.expander("Table View", icon=":material/table_view:"):
             'selector': 'th',
             'props': [('background-color', colors['soft_white'])]
         }]),
-        use_container_width=True
+        width='stretch'
     )
 
 #---------------------------------------------------------------------------------------------------------#
@@ -390,14 +391,6 @@ with colc_placeholder.container():
             hovermode='x unified',
             plot_bgcolor='rgba(255, 255, 255, 0)',
             paper_bgcolor='rgba(255, 255, 255, 0)',
-            # legend=dict(
-            #     orientation="h",
-            #     yanchor="bottom",
-            #     y=1.02,
-            #     xanchor="right",
-            #     x=1
-            # ),
-            # margin=dict(l=50, r=50, t=50, b=50)
         )
 
         # Add interactivity
@@ -411,7 +404,7 @@ with colc_placeholder.container():
         )
 
         # Display chart
-        st.plotly_chart(fig_transactions, use_container_width=True)
+        st.plotly_chart(fig_transactions, width='stretch')
 
     with col2c:
         # Filter the dataframe to the chosen month - Calculations
@@ -448,7 +441,7 @@ with colc_placeholder.container():
             }
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 #-----------------------------------------------------------------------------------------------------#
 
 
@@ -512,7 +505,7 @@ with colc_placeholder.container():
 
 # pio.show(fig)
 # # Display the plot
-# # st.plotly_chart(fig, use_container_width=True)
+# # st.plotly_chart(fig, width='stretch')
 
         # /* 2. Style the static selectbox field when closed */
         # section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {{
