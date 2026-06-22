@@ -169,9 +169,12 @@ st.markdown(
 
         /* 3. Targets titles, section headers, subheaders, etc */
         h1 {{
-            color: {colors['bright_pink']} !important;
+            color: {colors['primary_maroon']} !important;
         }}
-        h2, h3, h4, h5, h6
+        h1 {{
+            color: {colors['primary_maroon']} !important;
+        }}
+        h3, h4, h5, h6
         [data-testid="stHeader"] h1 {{
             color: {colors['primary_maroon']} !important;
         }}
@@ -350,7 +353,7 @@ fig.update_layout(
     clickmode='event+select',
     hoverlabel=dict(bgcolor='white', font_size=14),
     title={
-        'font': {'size': 24}  # Adjust size here
+        'font': {'size': 20}  # Adjust size here
     }
 )
 
@@ -444,7 +447,7 @@ with colc_placeholder.container():
         # Add interactivity
         fig_transactions.update_layout(
             title={
-                'font': {'size': 24}  # Adjust size here
+                'font': {'size': 20}  # Adjust size here
             },
             clickmode='event+select',
             hoverlabel=dict(bgcolor='white', font_size=14),
@@ -498,7 +501,7 @@ with colc_placeholder.container():
             legend_title="Transaction type",
             legend_traceorder="reversed", #This matches the stacked line graph chart
             title={
-                'font': {'size': 24}  # Adjust size here
+                'font': {'size': 20}  # Adjust size here
             },
             yaxis=dict(range=[0, 600_000_000_000], rangemode="tozero") # Keep Y axis the same through the months
         )
@@ -527,7 +530,7 @@ with col1d:
         )
 
             # Create the heatmap using Plotly Express
-        fig = px.imshow(
+        fig_hm = px.imshow(
             pivot_df,
             title=f"Churn Probability Heatmap: {selected_category} vs {selected_category_secondary} ",
             labels=dict(x=selected_category_secondary, y=selected_category, color="Churn Probability"),
@@ -537,8 +540,19 @@ with col1d:
             text_auto=True  # Display values on the heatmap
         )
 
+        # Add interactivity
+        fig_hm.update_layout(
+            # width=2000,  # Set a fixed width
+            # height=400,  # Set a fixed height
+            clickmode='event+select',
+            hoverlabel=dict(bgcolor='white', font_size=14),
+            title={
+                'font': {'size': 20}  # Adjust size here
+            }
+        )
+
         # Display the heatmap in Streamlit
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig_hm, width='stretch')
 with col2d:
 # Create the violin plot
     fig_violin = px.violin(
@@ -553,70 +567,16 @@ with col2d:
         template='plotly_white'  # Use a clean white background
     )
 
-    st.plotly_chart(fig_violin, use_container_width=True)
+    # Add interactivity
+    fig_violin.update_layout(
+        # width=2000,  # Set a fixed width
+        # height=400,  # Set a fixed height
+        clickmode='event+select',
+        hoverlabel=dict(bgcolor='white', font_size=14),
+        title={
+            'font': {'size': 20}  # Adjust size here
+        }
+    )
 
-#---------------------------------------------------------------------------------------------------------#
-
-
-
-#--------------------------Archive Testing
-# # List the relevant segments
-# segments = ['Bronze', 'Silver', 'Gold', 'Platinum']
-
-
-# # Get numerical columns
-# numerical_cols = customers.select_dtypes(include=[np.number]).columns.tolist()
-# # print(numerical_cols)
-
-# # Create aggregation filter (Mean or Median)
-# # aggregation_method = st.selectbox("Select Aggregation Method", ["Mean", "Median"])
-
-# # Pre calculate the dataframes
-# clv_segment_stats_mean = customers.groupby('clv_segment')[numerical_cols].mean()
-# clv_segment_stats_median = customers.groupby('clv_segment')[numerical_cols].median()
-
-
-# clv_segment_stats = clv_segment_stats_mean
-# # Swap the statistics
-# # if aggregation_method == "Mean":
-# #     clv_segment_stats = clv_segment_stats_mean
-# # else:
-# #     clv_segment_stats = clv_segment_stats_median
-
-# # Reindex to ensure segment order
-# # clv_segment_stats = clv_segment_stats.reindex(segments)
-# print(clv_segment_stats)
-
-
-# # Create heatmap
-# fig = go.Figure(data=go.Heatmap(
-#     z=clv_segment_stats.values,
-#     x=clv_segment_stats.columns,
-#     y=clv_segment_stats.index,
-#     colorscale='Viridis',
-#     hoverongaps=False
-# ))
-
-# # Update layout for better visualization
-# fig.update_layout(
-#     title='Customer Segments by Numerical Attributes',
-#     xaxis=dict(
-#         tickangle=45,
-#         title='Customer Descriptors (Numerical)',
-#         automargin=True
-#     ),
-#     yaxis=dict(
-#         title='Customer Segment Tier'
-#     ),
-#     height=600,
-#     width=1200
-# )
-
-# pio.show(fig)
-# # Display the plot
-# # st.plotly_chart(fig, width='stretch')
-
-        # /* 2. Style the static selectbox field when closed */
-        # section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {{
-        #     background-color: {colors["soft_white"]} !important;
-        # }}
+    st.plotly_chart(fig_violin, width='stretch')
+#-------------------------------------------------------------------------------------------------------#

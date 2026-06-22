@@ -6,11 +6,110 @@ import os
 import re
 
 # Load environment variables
-load_dotenv()
-groq_api_key = os.getenv("GROQ_API_KEY")
+# load_dotenv()
+# groq_api_key = os.getenv("GROQ_API_KEY")
 
+# THIS API KEY IS ONLY A TRIAL API KEY FOR 7 DAYS
+groq_api_key = "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"
+
+# Define color palette
+colors = {
+    'primary_maroon': '#360829',
+    'bright_pink': '#ff57bf',
+    'soft_white': "#fdf7fc",
+    'soft_gray':'#faf5f7',
+    'gray':"#ccc9ca",
+    'white': '#ffffff',
+    'black': '#000000'
+}
+
+# Add a logo to the top left
+st.logo("resources/Octicons-mark-github.svg",
+        link="https://github.com/Blim3202/COFINFAD-Project",
+        size="large")
+
+# Setup
 st.set_page_config(page_title="Dataframe Analyzer with Groq")
 st.title("🤖 Ask Your Dataframe Questions")
+
+# Inject custom CSS – Streamlit needs the `unsafe_allow_html=True` flag
+st.markdown(
+    f"""
+    <style>
+        /* 1. Reduce the top padding of the main block‑container */
+        .reportview-container .main .block-container {{
+        padding-top: 0.1rem;   /* try 0.2rem‑1rem until it looks right */
+        }}
+
+        /* 2. Target the main sidebar container and heading levels */
+        section[data-testid="stSidebar"] {{
+            background-color: {colors['soft_gray']};
+        }}
+        section[data-testid="stSidebar"] .stSelectbox label, {{
+            color: {colors['black']} !important;
+        }}
+        [data-testid="stSidebar"] h2 {{
+            color: {colors['primary_maroon']} !important;
+        }}
+
+        /* 3. Targets titles, section headers, subheaders, etc */
+        h1 {{
+            color: {colors['primary_maroon']} !important;
+        }}
+        h2, h3, h4, h5, h6
+        [data-testid="stHeader"] h1 {{
+            color: {colors['primary_maroon']} !important;
+        }}
+
+        /* 4. Create the Metric Card effect */
+        [data-testid="stMetric"] {{
+            # background-color: {colors['soft_white']}; 
+            border: 1px solid {colors['gray']};
+            border-radius: 15px;
+            padding: 10px 50px;
+            # box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
+            transition: transform 0.3s ease;
+        }}
+
+        /* 5. Style the plotly chart container */
+        .stPlotlyChart {{
+            # background-color: {colors['soft_white']};
+            # border: 1px solid {colors['primary_maroon']};
+            border-radius: 15px;
+            # padding: 10px 20px;  /* 0 vertical padding, 20px horizontal padding */
+            # margin: 10px;   /* Add margin to ensure space around the container */
+            # box-shadow: 2px 2px 10px rgba(0,0,0,0.25);
+            transition: transform 0.3s ease;
+        }}
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+#Add description
+st.markdown("""
+            This AI agent is designed to help you explore and analyze your transaction and customer data through natural language conversations.
+
+            **Data Understanding:**
+            - Analyze the first 10 rows of your transactions and customer datasets
+            - Identify patterns, trends, and relationships in your data
+            - Provide context-aware responses based on the conversation history
+
+            **Powered By:**
+            - **Primary LLM**: Meta Llama 4 Scout (17B parameter instruction-tuned model via Groq API)
+                - Handles main data analysis and question answering
+                - Advanced reasoning capabilities with transparent thinking process
+                - Contextual understanding across conversation history
+
+            - **Follow-up Generator**: Meta Llama 3.1 8B (Lightweight model via Groq API)
+                - Generates relevant suggested follow-up questions
+                - Optimized for speed and efficiency
+                - Ensures smooth conversational flow
+
+            Simply type your question about the data, and the agent will provide concise, data-driven answers based on the information available.
+            """)
+
 
 # Initialize Groq client
 client = Groq(api_key=groq_api_key)
@@ -37,8 +136,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Load the session variables - should be loaded from the app
-transactions = st.session_state.transactions
-customers = st.session_state.customers 
+try:
+    transactions = st.session_state.transactions
+    customers = st.session_state.customers 
+except Exception:
+    st.error("Please load dashboard before conversing with AI Agent")
 
 # Add session state for chat
 if "followup_question" not in st.session_state:
