@@ -172,12 +172,25 @@ if transactions is not None and customers is not None: # Dataframes copied over 
             if thinking:
                 st.session_state.thinking[msg_index] = thinking
 
-            # Add assistant response to messages
+           # Display final answer
+            # st.chat_message("assistant").write(final_answer)
             st.session_state.messages.append({"role": "assistant", "content": final_answer})
+
+            ####: Generate and display follow-up questions ###
+            followup_questions = generate_followup_questions(followup_prompt, st.session_state.messages)
+            if followup_questions:
+                st.write("**Suggested Follow-Up Questions:**")
+                cols = st.columns(len(followup_questions))
+                for idx, question in enumerate(followup_questions):
+                    if question:
+                        cols[idx].button(
+                            question,
+                            key=f"followup_{idx}_{question[:20]}",
+                            on_click=lambda q=question: set_followup_question(q)
+                        )
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
-
 
 
     # Display previous chat messages
