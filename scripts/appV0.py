@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from datetime import datetime
 import os
 
 #-----------------------------------------------------------------------------------------------------#
@@ -13,6 +14,7 @@ import os
 # print("Current working directory:", os.getcwd())
 
 # Get data function
+@st.cache_data # Cache the loading IMPORTANT
 def get_data():
 
     # Start Loading
@@ -84,20 +86,24 @@ min_month = min_month.strftime('%Y-%m')
 max_month = max_month.strftime('%Y-%m')
 # print(min_month,type(min_month),max_month,type(max_month))
 
-# Group by month and transaction type, summing amounts
-monthly_transactions = transactions.groupby(['month', 'type'])['amount'].sum().reset_index()
+#Cache the pivoting
+@st.cache_data
+def create_transaction_pivot(transactions):
 
-# Get all unique months in order
-all_months = pd.period_range(start=transactions['month'].min(),
-                            end=transactions['month'].max(),
-                            freq='M')
+    # Group by month and transaction type, summing amounts
+    monthly_transactions = transactions.groupby(['month', 'type'])['amount'].sum().reset_index()
 
-# Pivot the data for plotting
-transaction_pivot = monthly_transactions.pivot(index='month', columns='type', values='amount').fillna(0)
-transaction_pivot = transaction_pivot.reindex(all_months, fill_value=0)
-del monthly_transactions    # Delete intermediary df
-# print(transactions['month'].dtypes)
-# print(transaction_pivot.head(25))
+    # Get all unique months in order
+    all_months = pd.period_range(start=transactions['month'].min(),
+                                end=transactions['month'].max(),
+                                freq='M')
+
+    # Pivot the data for plotting
+    pivot = monthly_transactions.pivot(index='month', columns='type', values='amount').fillna(0)
+    return pivot.reindex(all_months, fill_value=0)
+
+# Load the cachecd function
+transaction_pivot = create_transaction_pivot(transactions)
 #-----------------------------------------------------------------------------------------------------#
 #------------------------------------------- Streamlit App -------------------------------------------#
 #-----------------------------------------------------------------------------------------------------#
@@ -273,7 +279,7 @@ if selected_category == 'clv_segment':
         x=selected_category,
         y='customer_lifetime_value',
         title=f'{aggregation_method} Customer Lifetime Value by {selected_category}',
-        labels={'customer_lifetime_value': f'CLV ({aggregation_method})'},
+        labels={'customer_lifetime_value': f'CLV ({aggregation_method}) In $'},
         color=selected_category,
         color_discrete_map=clv_segment_colors,  # Use custom colors
         text='customer_lifetime_value',
@@ -285,7 +291,7 @@ else: # All other columns
         x=selected_category,
         y='customer_lifetime_value',
         title=f'{aggregation_method} Customer Lifetime Value by {selected_category}',
-        labels={'customer_lifetime_value': f'CLV ({aggregation_method})'},
+        labels={'customer_lifetime_value': f'CLV ({aggregation_method}) In $'},
         color=selected_category,
         color_discrete_sequence=pcolors,  # Default colors
         text='customer_lifetime_value',
@@ -341,12 +347,16 @@ st.header("Transaction behaviours")
 # Placeholder for col to be visualised first
 colc_placeholder = st.empty()
 
+
 # Slider that lets the user pick a single month (or you can use a range slider)
 selected_month = st.select_slider(
     "Select month",
     options=months_list,
     value=months_list[0]          # default to the first month
 )
+selected_month_name = datetime.strptime(selected_month, "%Y-%m").strftime("%B %Y")
+# st.write(f"You selected: {selected_month}")
+st.write(selected_month_name)
 
 # Render the placeholder
 with colc_placeholder.container():
@@ -385,9 +395,9 @@ with colc_placeholder.container():
 
         # Update layout
         fig_transactions.update_layout(
-            title='Monthly Transaction Volume by Transaction Type (Stacked)',
+            title='Monthly Transaction Volume by Transaction Type',
             xaxis_title='Month',
-            yaxis_title='Total Transaction Amount (COP)',
+            yaxis_title='Total monthly transaction ($)',
             hovermode='x unified',
             plot_bgcolor='rgba(255, 255, 255, 0)',
             paper_bgcolor='rgba(255, 255, 255, 0)',
@@ -403,6 +413,14 @@ with colc_placeholder.container():
             legend_title="Transaction type"
         )
 
+        fig_transactions.update_xaxes(
+            tickmode='array',                     # "array" → one tick per entry
+            # tickvals=transaction_pivot.index,    # where the ticks go
+            # ticktext=transaction_pivot.index,    # what label to show (keeps “2023‑01” etc.)
+            tickangle=45,                         # rotate 45° counter‑clockwise
+            type='category'                       # treat the axis as categorical (no auto‑spacing)
+        )
+
         # Display chart
         st.plotly_chart(fig_transactions, width='stretch')
 
@@ -410,6 +428,7 @@ with colc_placeholder.container():
         # Filter the dataframe to the chosen month - Calculations
         filtered = transactions[transactions["month"] == selected_month]
 
+        # Plot the histogram
         fig = px.histogram(
             filtered,
             x="amount",                     # X‑axis: transaction amount (will be binned)
@@ -417,28 +436,33 @@ with colc_placeholder.container():
             color="type",                   # colour by transaction type (Withdrawal, Transfer, …)
             histfunc="sum",                 # sum the amounts in each bin
             # nbins=20,                     # adjust the number of bins as you like
-            title=f"Total Monthly Transaction Distribution – {selected_month}",
+            title=f"Total Monthly Transaction Distribution: {selected_month_name}",
             color_discrete_sequence=pcolors,  # Default colors
             category_orders={
                 "type": ["Deposit", "Payment", "Transfer", "Withdrawal"]
             }
         )
 
-        fig.update_traces(xbins=dict( 
-            start=0,
-            end=100000000,
-            size=10000000
-        ))
+        # Cap the x_axis
+        fig.update_traces(
+            xbins=dict( 
+                start=0,
+                end=100000000,
+                size=10000000
+            )
+        )
 
+        # Other updates to the layout
         fig.update_layout(
-            xaxis_title="Transaction amount (binned)",
-            yaxis_title="Total amount per bin",
+            yaxis_title="All Customers Transaction Sum ($)",
+            xaxis_title="Per Customer Monthly Transaction",
             bargap=0.1,
             legend_title="Transaction type",
             legend_traceorder="reversed", #This matches the stacked line graph chart
             title={
                 'font': {'size': 24}  # Adjust size here
-            }
+            },
+            yaxis=dict(range=[0, 600_000_000_000], rangemode="tozero") # Keep Y axis the same through the months
         )
 
         st.plotly_chart(fig, width='stretch')
