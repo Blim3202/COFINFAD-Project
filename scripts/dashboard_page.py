@@ -4,9 +4,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-from groq import Groq
-import os
-# from testllm import generate_followup_questions, handle_chat_input  # Import from your LLM helper file
 
 #-----------------------------------------------------------------------------------------------------#
 #----------------------------------------------- Setup -----------------------------------------------#
